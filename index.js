@@ -26,78 +26,21 @@ app.use("/api/rooms", roomsRoute);
 
 // Payment gateway
 const stripe = new Stripe(process.env.STRIPE_KEY);
-
-// app.post("/checkout-payment", async (request, response) => {
-//   const { token, reserve, currentUser, cartItems } = request.body;
-
-//   try {
-//     const customer = await stripe.customers.create({
-//       email: token.email,
-//       source: token.id,
-//     });
-
-//     const payment = await stripe.charges.create(
-//       {
-//         amount: reserve * 100,
-//         currency: "inr",
-//         customer: customer.id,
-//         receipt_email: token.email,
-//       },
-//       {
-//         idempotencyKey: uuid(),
-//       }
-//     );
-
-//     if (payment) {
-//       response.send("payment Done");
-//     } else {
-//       response.send("payment Failed");
-//     }
-//   } catch (error) {
-//     return response.status(400).json({ message: "something went wrong" });
-//   }
-// });
-
-// -------------------------------------------------------------------------------------- //
-
-// Payment
-
-app.post("/checkout-payment", async (request, response) => {
-  console.log(request.body);
-
-  try {
-    const params = {
-      submit_type: "pay",
-      mode: "payment",
-      payment_method_types: ["card"],
-      billing_address_collection: "auto",
-
-      line_items: req.body.map((item) => {
-        return {
-          price_data: {
-            currency: "inr",
-            product_data: {
-              name: item.name,
-            },
-            unit_amount: item.price * 100,
-          },
-          adjustable_quamtity: {
-            enabled: true,
-            minimum: 1,
-          },
-          quantity: item.qty,
-        };
-      }),
-      success_url: `${process.env.FRONTEND_URL}/success`,
-      cancel_url: `${process.env.FRONTEND_URL}/cancel`,
-    };
-
-    const session = await stripe.checkout.sessions.create(params);
-
-    response.status(200).json(session.id);
-  } catch (error) {
-    response.status(error.statusCode || 500).json(error.message);
-  }
+app.post("/payment", (req, res) => {
+  stripe.charges.create(
+    {
+      source: req.body.tokenId,
+      amount: req.body.amount,
+      currency: "inr",
+    },
+    (stripeErr, stripeRes) => {
+      if (stripeErr) {
+        res.status(500).json(stripeErr);
+      } else {
+        res.status(200).json(stripeRes);
+      }
+    }
+  );
 });
 
 const connect = async () => {
